@@ -5,7 +5,7 @@ const cors = require('cors');
 require('dotenv').config();
 
 const app = express();
-const PORT = process.env.PORT || 3000;
+const PORT = process.env.PORT || 3030;
 
 // Middleware
 app.use(cors());
@@ -256,9 +256,17 @@ async function sendTransferEmail(transferDoc) {
       },
     });
 
+    // Determine recipients based on transfer conditions
+    let recipients = process.env.INVENTORY_OFFICER_EMAIL;
+    
+    // Add INVENTORY_TECH_EMAIL for specific transfer conditions
+    if (transferDoc.transferFrom === "Groskopf" && transferDoc.transferTo === "Donum - Tasting Room") {
+      recipients = `${process.env.INVENTORY_OFFICER_EMAIL}, ${process.env.INVENTORY_TECH_EMAIL}`;
+    }
+
     const mailOptions = {
       from: process.env.EMAIL_USER,
-      to: process.env.INVENTORY_OFFICER_EMAIL,
+      to: recipients,
       subject: `Inventory Transfer Request - ${transferDoc.transferId}`,
       html: `
         <h2>Inventory Transfer Request</h2>
