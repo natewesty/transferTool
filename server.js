@@ -159,14 +159,14 @@ app.get('/api/products/search', async (req, res) => {
 // Submit transfer request
 app.post('/api/transfer', async (req, res) => {
   try {
-    const { transferFrom, transferTo, items, notes } = req.body;
+    const { transferFrom, transferTo, items, notes, authorizedBy } = req.body;
     
     if (!transferFrom || !transferTo || !items || items.length === 0) {
       return res.status(400).json({ error: 'Missing required fields' });
     }
 
     // Create transfer document
-    const transferDoc = createTransferDocument(transferFrom, transferTo, items, notes);
+    const transferDoc = createTransferDocument(transferFrom, transferTo, items, notes, authorizedBy);
     
     // Send email
     await sendTransferEmail(transferDoc);
@@ -183,26 +183,10 @@ app.post('/api/transfer', async (req, res) => {
   }
 });
 
-// Helper function to optimize bottles and cases
-function optimizeBottlesAndCases(bottles, cases, volume) {
-  if (!volume || (volume !== 750 && volume !== 1500)) {
-    // For non-standard volumes, return as-is
-    return { bottles, cases };
-  }
-  
-  // Calculate bottles per case based on volume
-  const bottlesPerCase = volume === 750 ? 12 : 6;
-  
-  // Convert excess bottles to cases
-  const totalBottles = bottles + (cases * bottlesPerCase);
-  const optimizedCases = Math.floor(totalBottles / bottlesPerCase);
-  const optimizedBottles = totalBottles % bottlesPerCase;
-  
-  return { bottles: optimizedBottles, cases: optimizedCases };
-}
+
 
 // Helper function to create transfer document
-function createTransferDocument(transferFrom, transferTo, items, notes) {
+function createTransferDocument(transferFrom, transferTo, items, notes, authorizedBy) {
   const timestamp = new Date().toISOString();
   const transferId = `TR-${Date.now()}`;
   
@@ -213,17 +197,15 @@ function createTransferDocument(transferFrom, transferTo, items, notes) {
     const bottles = item.bottles || 0;
     const cases = item.cases || 0;
     
-    // Optimize bottles and cases during submission
-    const optimized = optimizeBottlesAndCases(bottles, cases, item.volume);
-    
-    totalBottles += optimized.bottles;
-    totalCases += optimized.cases;
+    // Use exactly what the user entered - no optimization/conversion
+    totalBottles += bottles;
+    totalCases += cases;
     
     return {
       product: item.product,
       sku: item.sku || '',
-      bottles: optimized.bottles,
-      cases: optimized.cases,
+      bottles: bottles,
+      cases: cases,
       volume: item.volume
     };
   });
@@ -235,6 +217,7 @@ function createTransferDocument(transferFrom, transferTo, items, notes) {
     transferTo,
     items: formattedItems,
     notes: notes || '',
+    authorizedBy: authorizedBy || '',
     summary: {
       totalBottles,
       totalCases,
@@ -274,6 +257,7 @@ async function sendTransferEmail(transferDoc) {
         <p><strong>Date:</strong> ${new Date(transferDoc.timestamp).toLocaleString()}</p>
         <p><strong>From:</strong> ${transferDoc.transferFrom}</p>
         <p><strong>To:</strong> ${transferDoc.transferTo}</p>
+        <p><strong>Authorized By:</strong> ${transferDoc.authorizedBy || 'Not specified'}</p>
         
         <h3>Items to Transfer:</h3>
         <table border="1" style="border-collapse: collapse; width: 100%;">
@@ -282,7 +266,6 @@ async function sendTransferEmail(transferDoc) {
             <th style="padding: 8px;">SKU</th>
             <th style="padding: 8px;">Bottles</th>
             <th style="padding: 8px;">Cases (9L)</th>
-            <th style="padding: 8px;">Volume (ml)</th>
           </tr>
           ${transferDoc.items.map(item => `
             <tr>
@@ -290,7 +273,6 @@ async function sendTransferEmail(transferDoc) {
               <td style="padding: 8px;">${item.sku}</td>
               <td style="padding: 8px;">${item.bottles}</td>
               <td style="padding: 8px;">${item.cases}</td>
-              <td style="padding: 8px;">${item.volume}</td>
             </tr>
           `).join('')}
         </table>

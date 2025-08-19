@@ -349,6 +349,105 @@ section h2 {
     color: #666;
 }
 
+/* Confirmation Modal Specific Styles */
+.confirmation-modal {
+    max-width: 600px;
+    text-align: left;
+}
+
+.confirmation-details {
+    margin-bottom: 25px;
+}
+
+.detail-row {
+    margin-bottom: 15px;
+    padding: 10px;
+    background: #f8f9fa;
+    border-radius: 6px;
+    border-left: 4px solid #667eea;
+}
+
+.detail-row strong {
+    color: #2c3e50;
+    display: inline-block;
+    min-width: 120px;
+}
+
+.transfer-items {
+    margin-bottom: 15px;
+}
+
+.transfer-items strong {
+    display: block;
+    margin-bottom: 10px;
+    color: #2c3e50;
+}
+
+.transfer-items > div {
+    background: #f8f9fa;
+    border-radius: 6px;
+    padding: 15px;
+    border-left: 4px solid #667eea;
+}
+
+.transfer-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 8px 0;
+    border-bottom: 1px solid #e0e6ed;
+}
+
+.transfer-item:last-child {
+    border-bottom: none;
+}
+
+.transfer-item-details {
+    flex: 1;
+}
+
+.transfer-item-quantity {
+    text-align: right;
+    font-weight: 600;
+    color: #667eea;
+}
+
+.authorization-section {
+    margin-bottom: 25px;
+    padding: 20px;
+    background: #f8f9fa;
+    border-radius: 8px;
+    border: 2px solid #e0e6ed;
+}
+
+.authorization-section label {
+    display: block;
+    font-weight: 600;
+    margin-bottom: 10px;
+    color: #2c3e50;
+}
+
+.authorization-section input {
+    width: 100%;
+    padding: 12px 15px;
+    border: 2px solid #e0e6ed;
+    border-radius: 6px;
+    font-size: 1rem;
+    transition: all 0.3s ease;
+}
+
+.authorization-section input:focus {
+    outline: none;
+    border-color: #667eea;
+    box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+}
+
+.modal-buttons {
+    display: flex;
+    gap: 15px;
+    justify-content: flex-end;
+}
+
 /* Loading spinner */
 .loading-spinner {
     position: fixed;

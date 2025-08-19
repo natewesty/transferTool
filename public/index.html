@@ -85,6 +85,41 @@
             </section>
         </form>
 
+        <!-- Confirmation Modal -->
+        <div id="confirmationModal" class="modal" style="display: none;">
+            <div class="modal-content confirmation-modal">
+                <h3>Confirm Transfer Request</h3>
+                
+                <div class="confirmation-details">
+                    <div class="detail-row">
+                        <strong>Transfer From:</strong> <span id="confirmFrom"></span>
+                    </div>
+                    <div class="detail-row">
+                        <strong>Transfer To:</strong> <span id="confirmTo"></span>
+                    </div>
+                    
+                    <div class="transfer-items">
+                        <strong>Items to Transfer:</strong>
+                        <div id="confirmItems"></div>
+                    </div>
+                    
+                    <div class="detail-row" id="confirmNotesRow" style="display: none;">
+                        <strong>Notes:</strong> <span id="confirmNotes"></span>
+                    </div>
+                </div>
+                
+                <div class="authorization-section">
+                    <label for="authorizedName">Transfer Authorized By: *</label>
+                    <input type="text" id="authorizedName" placeholder="Enter your name" required>
+                </div>
+                
+                <div class="modal-buttons">
+                    <button type="button" id="cancelTransferBtn" class="btn btn-secondary">Cancel</button>
+                    <button type="button" id="confirmTransferBtn" class="btn btn-primary">Submit Transfer</button>
+                </div>
+            </div>
+        </div>
+
         <!-- Success Modal -->
         <div id="successModal" class="modal" style="display: none;">
             <div class="modal-content">

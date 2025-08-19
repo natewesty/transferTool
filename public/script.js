@@ -11,6 +11,7 @@ const transferToOther = document.getElementById('transferToOther');
 const addItemBtn = document.getElementById('addItemBtn');
 const itemsContainer = document.getElementById('itemsContainer');
 const submitBtn = document.getElementById('submitBtn');
+const confirmationModal = document.getElementById('confirmationModal');
 const successModal = document.getElementById('successModal');
 const successMessage = document.getElementById('successMessage');
 const closeModalBtn = document.getElementById('closeModalBtn');
@@ -58,13 +59,31 @@ function setupEventListeners() {
     // Add item button
     addItemBtn.addEventListener('click', addItemRow);
     
+    // Confirmation modal buttons
+    const cancelTransferBtn = document.getElementById('cancelTransferBtn');
+    const confirmTransferBtn = document.getElementById('confirmTransferBtn');
+    
+    if (cancelTransferBtn) {
+        cancelTransferBtn.addEventListener('click', closeConfirmationModal);
+    }
+    
+    if (confirmTransferBtn) {
+        confirmTransferBtn.addEventListener('click', handleConfirmedTransfer);
+    }
+    
     // Modal close button
     closeModalBtn.addEventListener('click', closeSuccessModal);
     
-    // Close modal when clicking outside
+    // Close modals when clicking outside
     successModal.addEventListener('click', function(e) {
         if (e.target === successModal) {
             closeSuccessModal();
+        }
+    });
+    
+    confirmationModal.addEventListener('click', function(e) {
+        if (e.target === confirmationModal) {
+            closeConfirmationModal();
         }
     });
 }
@@ -225,36 +244,15 @@ function setupItemRowEventListeners(itemId) {
         }
     });
     
-    // Manage field states based on volume
+    // Manage field states - always enable both fields for all products
     function updateFieldStates() {
-        const volume = getProductVolume(itemId);
-        if (volume === 750 || volume === 1500) {
-            // Enable both fields for standard volumes
-            bottlesInput.disabled = false;
-            casesInput.disabled = false;
-            bottlesInput.style.backgroundColor = 'white';
-            casesInput.style.backgroundColor = 'white';
-            bottlesInput.style.cursor = 'text';
-            casesInput.style.cursor = 'text';
-        } else if (volume) {
-            // For non-standard volumes, allow both fields but show warning
-            bottlesInput.disabled = false;
-            casesInput.disabled = false;
-            bottlesInput.style.backgroundColor = 'white';
-            casesInput.style.backgroundColor = 'white';
-            bottlesInput.style.cursor = 'text';
-            casesInput.style.cursor = 'text';
-            // Don't set cases to "-" - let user enter what they want
-        } else {
-            // No volume selected, enable both fields
-            bottlesInput.disabled = false;
-            casesInput.disabled = false;
-            bottlesInput.style.backgroundColor = 'white';
-            casesInput.style.backgroundColor = 'white';
-            bottlesInput.style.cursor = 'text';
-            casesInput.style.cursor = 'text';
-            // Don't set cases to "-" - let user enter what they want
-        }
+        // Enable both fields for all products regardless of volume
+        bottlesInput.disabled = false;
+        casesInput.disabled = false;
+        bottlesInput.style.backgroundColor = 'white';
+        casesInput.style.backgroundColor = 'white';
+        bottlesInput.style.cursor = 'text';
+        casesInput.style.cursor = 'text';
     }
     
     // Initial field state setup
@@ -367,29 +365,17 @@ function selectProduct(resultElement, itemId) {
         skuInput.value = resultElement.dataset.sku || '';
     }
     
-    // Update field states based on the selected product's volume
+    // Update field states - always enable both fields for all products
     const bottlesInput = document.querySelector(`[data-item-id="${itemId}"][data-type="bottles"]`);
     const casesInput = document.querySelector(`[data-item-id="${itemId}"][data-type="cases"]`);
     if (bottlesInput && casesInput) {
-        const volume = parseInt(resultElement.dataset.volume);
-        if (volume === 750 || volume === 1500) {
-            // Enable both fields for standard volumes
-            bottlesInput.disabled = false;
-            casesInput.disabled = false;
-            bottlesInput.style.backgroundColor = 'white';
-            casesInput.style.backgroundColor = 'white';
-            bottlesInput.style.cursor = 'text';
-            casesInput.style.cursor = 'text';
-        } else if (volume) {
-            // Disable cases field for non-standard volumes
-            bottlesInput.disabled = false;
-            casesInput.disabled = true;
-            bottlesInput.style.backgroundColor = 'white';
-            casesInput.style.backgroundColor = '#f8f9fa';
-            casesInput.style.cursor = 'not-allowed';
-            // Clear cases field when volume doesn't support it
-            casesInput.value = '';
-        }
+        // Enable both fields for all products regardless of volume
+        bottlesInput.disabled = false;
+        casesInput.disabled = false;
+        bottlesInput.style.backgroundColor = 'white';
+        casesInput.style.backgroundColor = 'white';
+        bottlesInput.style.cursor = 'text';
+        casesInput.style.cursor = 'text';
     }
     
     // Hide search results
@@ -436,25 +422,8 @@ async function handleFormSubmit(e) {
         return;
     }
     
-    try {
-        showLoading(true);
-        
-        const formData = collectFormData();
-        const response = await submitTransfer(formData);
-        
-        if (response.success) {
-            showSuccessModal(response.message, response.transferDoc);
-            resetForm();
-        } else {
-            showError(response.error || 'Transfer submission failed');
-        }
-        
-    } catch (error) {
-        console.error('Form submission error:', error);
-        showError('Failed to submit transfer request. Please try again.');
-    } finally {
-        showLoading(false);
-    }
+    // Show confirmation modal instead of submitting directly
+    showConfirmationModal();
 }
 
 function validateForm() {
@@ -589,4 +558,82 @@ function showLoading(show) {
 function showError(message) {
     // Simple error display - you could enhance this with a toast notification
     alert(message);
+}
+
+// Confirmation modal functions
+function showConfirmationModal() {
+    const formData = collectFormData();
+    
+    // Populate confirmation details
+    document.getElementById('confirmFrom').textContent = formData.transferFrom;
+    document.getElementById('confirmTo').textContent = formData.transferTo;
+    
+    // Populate items
+    const confirmItemsDiv = document.getElementById('confirmItems');
+    confirmItemsDiv.innerHTML = formData.items.map(item => `
+        <div class="transfer-item">
+            <div class="transfer-item-details">
+                <strong>${item.product}</strong><br>
+                <small>SKU: ${item.sku}</small>
+            </div>
+            <div class="transfer-item-quantity">
+                ${item.bottles > 0 ? `${item.bottles} bottles` : ''}
+                ${item.bottles > 0 && item.cases > 0 ? ' + ' : ''}
+                ${item.cases > 0 ? `${item.cases} cases` : ''}
+            </div>
+        </div>
+    `).join('');
+    
+    // Show/hide notes section
+    const notesRow = document.getElementById('confirmNotesRow');
+    const notesSpan = document.getElementById('confirmNotes');
+    if (formData.notes && formData.notes.trim()) {
+        notesSpan.textContent = formData.notes;
+        notesRow.style.display = 'block';
+    } else {
+        notesRow.style.display = 'none';
+    }
+    
+    // Clear authorization field
+    document.getElementById('authorizedName').value = '';
+    
+    // Show modal
+    confirmationModal.style.display = 'flex';
+}
+
+function closeConfirmationModal() {
+    confirmationModal.style.display = 'none';
+}
+
+async function handleConfirmedTransfer() {
+    const authorizedBy = document.getElementById('authorizedName').value.trim();
+    
+    if (!authorizedBy) {
+        showError('Please enter your name to authorize this transfer.');
+        return;
+    }
+    
+    try {
+        closeConfirmationModal();
+        showLoading(true);
+        
+        const formData = collectFormData();
+        // Add authorization to form data
+        formData.authorizedBy = authorizedBy;
+        
+        const response = await submitTransfer(formData);
+        
+        if (response.success) {
+            showSuccessModal(response.message, response.transferDoc);
+            resetForm();
+        } else {
+            showError(response.error || 'Transfer submission failed');
+        }
+        
+    } catch (error) {
+        console.error('Form submission error:', error);
+        showError('Failed to submit transfer request. Please try again.');
+    } finally {
+        showLoading(false);
+    }
 }
