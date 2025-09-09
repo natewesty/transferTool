@@ -107,7 +107,7 @@ app.get('/api/products', async (req, res) => {
   }
 });
 
-// Search products by title
+// Search products by title with fuzzy matching
 app.get('/api/products/search', async (req, res) => {
   try {
     const { q } = req.query;
@@ -117,30 +117,55 @@ app.get('/api/products/search', async (req, res) => {
     
     console.log(`Searching for: "${q}"`);
     
+    // Split search query into individual words and clean them
+    const searchWords = q.trim().split(/\s+/).filter(word => word.length > 0);
+    console.log('Search words:', searchWords);
+    
+    if (searchWords.length === 0) {
+      return res.json([]);
+    }
+    
+    // Build dynamic query for fuzzy matching
+    // Each word must appear somewhere in the product title
+    const wordConditions = searchWords.map((_, index) => `product_title ILIKE $${index + 1}`).join(' AND ');
+    
+    // Also include exact substring match for better ranking
+    const exactMatchCondition = `product_title ILIKE $${searchWords.length + 1}`;
+    const startsWithCondition = `product_title ILIKE $${searchWords.length + 2}`;
+    const endsWithCondition = `product_title ILIKE $${searchWords.length + 3}`;
+    
     const query = `
-      SELECT product_variant_id, product_title, variant_title, volume_ml, sku, sub_title
+      SELECT product_variant_id, product_title, variant_title, volume_ml, sku, sub_title,
+             CASE 
+               WHEN product_title ILIKE $${searchWords.length + 1} THEN 1
+               WHEN product_title ILIKE $${searchWords.length + 2} THEN 2
+               WHEN product_title ILIKE $${searchWords.length + 3} THEN 3
+               ELSE 4
+             END as exact_match_rank
       FROM dim_product_variant 
       WHERE (
-        product_title ILIKE $1 
-        OR product_title ILIKE $2
-        OR product_title ILIKE $3
+        (${wordConditions})
+        OR ${exactMatchCondition}
+        OR ${startsWithCondition}
+        OR ${endsWithCondition}
       )
       AND (sub_title IS NULL OR sub_title NOT ILIKE '%Wine Bundle%')
       ORDER BY 
-        CASE 
-          WHEN product_title ILIKE $1 THEN 1
-          WHEN product_title ILIKE $2 THEN 2
-          WHEN product_title ILIKE $3 THEN 3
-          ELSE 4
-        END,
+        exact_match_rank,
         product_title, variant_title
       LIMIT 20
     `;
     
+    // Build search parameters
     const searchParams = [
-      `%${q}%`,           // Exact substring match
-      `${q}%`,            // Starts with query
-      `%${q}`             // Ends with query
+      // Individual word matches
+      ...searchWords.map(word => `%${word}%`),
+      // Exact substring match
+      `%${q}%`,
+      // Starts with query
+      `${q}%`,
+      // Ends with query
+      `%${q}`
     ];
     
     console.log('Search parameters:', searchParams);
@@ -231,7 +256,7 @@ function createTransferDocument(transferFrom, transferTo, items, notes, authoriz
 // Helper function to send transfer email
 async function sendTransferEmail(transferDoc) {
   try {
-    const transporter = nodemailer.createTransport({
+    const transporter = nodemailer.createTransporter({
       host: process.env.EMAIL_HOST,
       port: process.env.EMAIL_PORT,
       secure: false,
