@@ -90,12 +90,13 @@ app.get('/api/debug/products', async (req, res) => {
 app.get('/api/products', async (req, res) => {
   try {
     const query = `
-      SELECT product_variant_id, product_title, variant_title, volume_ml, sku
+      SELECT product_variant_id, product_title, variant_title, volume_ml, sku, sub_title
       FROM dim_product_variant 
+      WHERE (sub_title IS NULL OR sub_title NOT ILIKE '%Wine Bundle%')
       ORDER BY product_title, variant_title
     `;
     const result = await pool.query(query);
-    console.log(`Found ${result.rows.length} products in database (removed has_inventory filter)`);
+    console.log(`Found ${result.rows.length} products in database (excluded Wine Bundle items)`);
     if (result.rows.length > 0) {
       console.log('Sample products:', result.rows.slice(0, 3).map(p => p.product_title));
     }
@@ -117,13 +118,14 @@ app.get('/api/products/search', async (req, res) => {
     console.log(`Searching for: "${q}"`);
     
     const query = `
-      SELECT product_variant_id, product_title, variant_title, volume_ml, sku
+      SELECT product_variant_id, product_title, variant_title, volume_ml, sku, sub_title
       FROM dim_product_variant 
       WHERE (
         product_title ILIKE $1 
         OR product_title ILIKE $2
         OR product_title ILIKE $3
       )
+      AND (sub_title IS NULL OR sub_title NOT ILIKE '%Wine Bundle%')
       ORDER BY 
         CASE 
           WHEN product_title ILIKE $1 THEN 1
@@ -144,7 +146,7 @@ app.get('/api/products/search', async (req, res) => {
     console.log('Search parameters:', searchParams);
     
     const result = await pool.query(query, searchParams);
-    console.log(`Found ${result.rows.length} search results for "${q}"`);
+    console.log(`Found ${result.rows.length} search results for "${q}" (excluded Wine Bundle items)`);
     if (result.rows.length > 0) {
       console.log('Search results:', result.rows.map(p => p.product_title));
     }
