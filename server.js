@@ -215,7 +215,12 @@ app.post('/api/transfer', async (req, res) => {
 // Helper function to create transfer document
 function createTransferDocument(transferFrom, transferTo, items, notes, authorizedBy) {
   const timestamp = new Date().toISOString();
-  const transferId = `TR-${Date.now()}`;
+  const now = new Date();
+  const month = String(now.getMonth() + 1).padStart(2, '0');
+  const day = String(now.getDate()).padStart(2, '0');
+  const year = String(now.getFullYear()).slice(-2);
+  const designator = String(now.getSeconds() % 10);
+  const transferId = `TR-${month}${day}${year}${designator}`;
   
   let totalBottles = 0;
   let totalCases = 0;
